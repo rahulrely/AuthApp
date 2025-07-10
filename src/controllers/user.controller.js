@@ -85,7 +85,7 @@ const registerUserGoogle = asyncHandler(async(req,res)=>{
             });
             const {accessToken ,refreshToken} = generateAccessAndRefreshTokens(user._id)
             
-            const createdUser =  await User.findById(user._id).select("-password -refreshToken -googleRefreshToken -githubRefreshToken");
+            const createdUser =  await User.findById(user._id).select("-password -refreshToken -googleRefreshToken -githubAccessToken");
 
             console.log(createdUser);
 
@@ -178,7 +178,7 @@ const registerUserGitHub = asyncHandler(async (req, res) => {
     // Step 5: Generate tokens
     const { accessToken, refreshToken } = generateAccessAndRefreshTokens(user._id);
     const userSafe = await User.findById(user._id).select(
-      '-password -refreshToken -googleRefreshToken -githubRefreshToken'
+      '-password -refreshToken -googleRefreshToken -githubAccessToken'
     );
 
     return res
