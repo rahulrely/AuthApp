@@ -40,22 +40,6 @@ app.use(session({
     secret: process.env.SECRET, // Replace with a strong secret
     resave: false,
     saveUninitialized: false,
-    store: MongoStore.create({ // Use a persistent store for production
-        mongoUrl: process.env.MONGO_URI, // Your MongoDB connection string from environment variables
-        collectionName: 'sessions', // Name of the collection in your DB to store sessions
-        ttl: 14 * 24 * 60 * 60, // Session TTL in seconds (e.g., 14 days)
-        autoRemove: 'interval', // Auto-remove expired sessions
-        autoRemoveInterval: 10, // In minutes
-        dbName :process.env.DB_NAME
-    }),
-    cookie: {
-        secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
-        httpOnly: true, // Prevent client-side JS access
-        // CRITICAL FOR CROSS-ORIGIN:
-        sameSite: 'None', // Allow cross-site cookies
-        maxAge: 1000 * 60 * 60 * 24, // 24 hours (adjust as needed)
-        domain : process.env.DOMAIN
-    }
 }));
 
 // //routes import

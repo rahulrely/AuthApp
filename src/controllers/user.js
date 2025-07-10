@@ -6,6 +6,24 @@ import User from "../models/user.model.js";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import url from 'url';
+// Function that generate access and refresh token
+const generateAccessAndRefreshTokens = async (userId) => {
+    try {
+        const user = await User.findById(userId);
+
+        const accessToken = user.generateAccessToken();
+        const refreshToken = user.generateRefreshToken();
+
+        user.refreshToken = refreshToken;
+        await user.save({ validateBeforeSave: false }); // Save the new refresh token
+
+        return { accessToken, refreshToken };
+
+    } catch (error) {
+        throw new APIError(500, "Went Wrong while generating refresh and access token");
+    }
+}
+
 /**
 * Register a new user using  Google.
 * @param {Object} req - Express request object.
@@ -33,52 +51,53 @@ const registerUserGoogle = asyncHandler(async(req,res)=>{
         } else { // Get access and refresh tokens (if access_type is offline)
             let { tokens } = await oauth2Client.getToken(q.code);
             oauth2Client.setCredentials(tokens);
-
+            
             console.log("googleToken received:", tokens);
-
-            oauth2Client.setCredentials({ access_token : tokens?.access_token });
-            
-            const oauth2 = google.oauth2({
-                version: 'v2',
-                auth: oauth2Client 
-            });
-            
-            const userinfo = await oauth2.userinfo.get();
-
-            console.log(userinfo.data);
             
             const googleRefreshToken = tokens?.refresh_token;
             const googleAccessToken = tokens?.access_token;
             
-            // --- Clear session data after successful linking ---
-            // if (req.session) {
-            //     req.session.state = undefined; // Clear CSRF state
-            //     // req.session.destroy((err) => {
-            //     //     if (err) console.error("Error destroying session:", err);
-            //     // });
-            // }
+            oauth2Client.setCredentials({ access_token : googleAccessToken });
 
-            // const user = await User.create({
-            //     name,
-            //     email,
-            //     password,
-            //     role,
-            //     verifyCode,
-            //     tempToken, 
-            //     verifyCodeExpiry,
-            //     ...(role === "Primary" && { inviteCode }), // Only add inviteCode for "primary" users
-            //     ...(role === "Primary" && { inviteCodeExpiry })
-            // });
+            const oauth2 = google.oauth2({
+            version: 'v2',
+                auth: oauth2Client 
+            });
+            
+            const userinfo = await oauth2.userinfo.get();
+            console.log(userinfo.data);
+
+            const {id, email , name , picture , verified_email} = userinfo.data;
+
+            const user = await User.create({
+                name,
+                email,
+                password : id,
+                isVerified : verified_email,
+                profileURL : picture,
+                googleRefreshToken
+            });
+            const {accessToken ,refreshToken} = generateAccessAndRefreshTokens(user._id)
+            
+            const createdUser =  await User.findById(user._id).select("-password -refreshToken -googleRefreshToken -githubRefreshToken");
+
+            console.log(createdUser);
 
             const options = {
                 httpOnly: true,
-                secure: true,
-                sameSite: "None", 
+                secure: true, 
             };
             return res
                 .status(200)
                 .cookie("accessToken", accessToken, options)
                 .cookie("refreshToken", refreshToken, options)
+                .json(
+                    new APIResponse(
+                        200,
+                        createdUser,
+                        "User Succesfully Created and Authenticated"
+                    )
+                )
                 // .redirect(`${process.env.DOMAIN}?linked=true`);
         }
     } catch (error) {
