@@ -1,8 +1,7 @@
 import { asyncHandler } from "../utils/asynchandler.js";
-import { APIError } from "../utils/APIError.js";
-import { APIResponse } from "../utils/APIResponse.js";
+import { APIError , APIResponse} from "../utils/apiResponse.js";
 import { google }  from 'googleapis';
-import { oauth2Client } from "../google/auth.js";
+import { oauth2Client } from "../auth/google.js";
 import User from "../models/user.model.js";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";

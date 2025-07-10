@@ -9,7 +9,7 @@ const router = Router();
 
 router.get("/google",genGoogleURL);
 
-router.get("/googlecb",registerUserGoogle);
+router.get("/auth/google",registerUserGoogle); // http://localhost:7000/api/v1/users/auth/google
 
 
 export default router;

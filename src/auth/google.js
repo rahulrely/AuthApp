@@ -6,7 +6,7 @@ import { asyncHandler } from "../utils/asynchandler.js";
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  process.env.GOOGLE_REDIRECT_URL // e.g., "http://localhost:7000/auth/google/callback"
+  process.env.GOOGLE_REDIRECT_URL // "http://localhost:7000/api/v1/users/auth/google"
 );
 
 // Google OAuth2 scopes
@@ -31,7 +31,6 @@ const genGoogleURL = asyncHandler(async(req,res)=>{
     // Include the state parameter to reduce the risk of CSRF attacks.
     state: state
   });
-
   res.redirect(authorizationUrl);
 })
 

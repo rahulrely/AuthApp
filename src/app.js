@@ -63,7 +63,7 @@ import userRouter  from "./routes/user.route.js"
 // import dashboardRouter from "./routes/dashboard.route.js
 
 //routes declarations
-app.use("/api/v1/users",userRouter);      // rahul.com/api/v1/users/register
+app.use("/api/v1/users",userRouter);      // http://localhost:7000/api/v1/users
 // app.use("/api/v1/dashboard",dashboardRouter);
 
 export {app} ;
