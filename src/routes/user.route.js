@@ -1,7 +1,7 @@
 import {
     registerUserGoogle,
     registerUserGitHub
-} from "../controllers/user.js";
+} from "../controllers/user.controller.js";
 import { genGoogleURL } from "../auth/google.js";
 import { genGitHubURL } from "../auth/github.js";
 

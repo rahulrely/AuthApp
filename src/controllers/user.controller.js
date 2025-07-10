@@ -3,10 +3,16 @@ import { APIError , APIResponse} from "../utils/apiResponse.js";
 import { google }  from 'googleapis';
 import { oauth2Client } from "../auth/google.js";
 import User from "../models/user.model.js";
-import crypto from "crypto";
-import jwt from "jsonwebtoken";
 import url from 'url';
 import axios from 'axios';
+
+
+const options = {
+httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'Lax', // Use 'None' if cross-origin and using secure cookies
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+};
 // Function that generate access and refresh token
 const generateAccessAndRefreshTokens = async (userId) => {
     try {
@@ -83,10 +89,6 @@ const registerUserGoogle = asyncHandler(async(req,res)=>{
 
             console.log(createdUser);
 
-            const options = {
-                httpOnly: true,
-                secure: true, 
-            };
             return res
                 .status(200)
                 .cookie("accessToken", accessToken, options)
@@ -116,13 +118,14 @@ const registerUserGoogle = asyncHandler(async(req,res)=>{
 * @param {Object} req - Express request object.
 * @param {Object} res - Express response object.
 */
+
 const registerUserGitHub = asyncHandler(async (req, res) => {
   const code = req.query.code;
   if (!code) return res.status(400).send('No code provided');
 
   try {
-    // Exchange code for access token
-    const token = await axios.post(
+    // Step 1: Exchange code for access token
+    const tokenRes = await axios.post(
       'https://github.com/login/oauth/access_token',
       {
         client_id: process.env.GITHUB_CLIENT_ID,
@@ -130,81 +133,68 @@ const registerUserGitHub = asyncHandler(async (req, res) => {
         code,
       },
       {
-        headers: {
-          Accept: 'application/json',
-        },
+        headers: { Accept: 'application/json' },
       }
     );
 
-    const access_token = token.data.access_token;
+    const access_token = tokenRes.data.access_token;
     if (!access_token) return res.status(401).send('Access token not received');
 
-    // Optional: Fetch GitHub user
+    // Step 2: Fetch GitHub profile
     const userRes = await axios.get('https://api.github.com/user', {
-      headers: {
-        Authorization: `token ${access_token}`,
-      },
-    });
-    const userEmail = await axios.get('https://api.github.com/user/emails', {
-      headers: {
-        Authorization: `token ${access_token}`,
-        },
+      headers: { Authorization: `token ${access_token}` },
     });
 
-    const { name ,avatar_url} = userRes.data;
-    const { email ,verified} = userEmail.data[0];
+    // Step 3: Fetch verified primary email
+    const emailRes = await axios.get('https://api.github.com/user/emails', {
+      headers: { Authorization: `token ${access_token}` },
+    });
 
-    const existingUser = await User.findOne({ email })
-    if(!existingUser){
-        const user = await User.create({
-            name,
-            email,
-            isVerified : verified,
-            profileURL : avatar_url,
-            githubAccessToken :access_token,
-        });
-        const {accessToken ,refreshToken} = generateAccessAndRefreshTokens(user._id)
-        const createdUser =  await User.findById(user._id).select("-password -refreshToken -googleRefreshToken -githubRefreshToken");
-        
-            return res
-                .status(200)
-                .cookie("accessToken", accessToken, options)
-                .cookie("refreshToken", refreshToken, options)
-                .json(
-                    new APIResponse(
-                        200,
-                        createdUser,
-                        "User Succesfully Created and Authenticated"
-                    )
-                )
-                // .redirect(`${process.env.DOMAIN}?linked=true`);
+    const emails = emailRes.data;
+    const primaryEmail = emails.find(e => e.primary && e.verified);
+    if (!primaryEmail) return res.status(403).send('No verified primary email found');
+
+    const { email, verified } = primaryEmail;
+    const { name, avatar_url } = userRes.data;
+
+    // Step 4: Create or update user
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = await User.create({
+        name,
+        email,
+        isVerified: verified,
+        profileURL: avatar_url,
+        githubAccessToken: access_token,
+      });
+    } else {
+      user.githubAccessToken = access_token;
+      if (!user.isVerified) user.isVerified = verified;
+      user.profileURL = avatar_url;
+      await user.save();
     }
 
-    existingUser.githubAccessToken = access_token;
-    if(!existingUser.isVerified){
-        existingUser.isVerified = verified;
-    }
-    existingUser.profileURL = avatar_url,
-    await existingUser.save();
-    const {accessToken ,refreshToken} = generateAccessAndRefreshTokens(existingUser._id)
-        const createdUser =  await User.findById(existingUser._id).select("-password -refreshToken -googleRefreshToken -githubRefreshToken");
-        
-            return res
-                .status(200)
-                .cookie("accessToken", accessToken, options)
-                .cookie("refreshToken", refreshToken, options)
-                .json(
-                    new APIResponse(
-                        200,
-                        createdUser,
-                        "User Succesfully Created and Authenticated"
-                    )
-                )
-                // .redirect(`${process.env.DOMAIN}?linked=true`);
-    
+    // Step 5: Generate tokens
+    const { accessToken, refreshToken } = generateAccessAndRefreshTokens(user._id);
+    const userSafe = await User.findById(user._id).select(
+      '-password -refreshToken -googleRefreshToken -githubRefreshToken'
+    );
+
+    return res
+      .status(200)
+      .cookie('accessToken', accessToken, options)
+      .cookie('refreshToken', refreshToken, options)
+      .json(
+        new APIResponse(
+          200,
+          userSafe,
+          'User successfully authenticated via GitHub'
+        )
+      );
   } catch (err) {
-    console.error('OAuth error:', err.message);
-    res.status(500).send('OAuth failed');
+    console.error('GitHub OAuth error:', err.response?.data || err.message);
+    res.status(500).send('GitHub OAuth failed');
   }
 });
 
