@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
 //Define User Schema
@@ -9,26 +8,16 @@ const userSchema = new mongoose.Schema(
         email: { type: String, unique: true, required: true, index: true,
             match:/[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g
         },
-        password : { type : String , required : true , default : null },
         isVerified : { type : Boolean , default : false} ,
         refreshToken : { type : String , default : null},
         googleRefreshToken : { type : String , default : null},
-        githubRefreshToken : { type : String , default : null},
+        githubAccessToken : { type : String , default : null},
         profileURL : { type : String , default : null},
 
     },{
         timestamps: true
     }
 );
-
-// Pre hooks
-userSchema.pre("save",async function (next){
-  if(!this.isModified("password")) return next();
-
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password,salt);
-  next();
-});
 
 userSchema.methods.generateAccessToken = function (){
   return jwt.sign(

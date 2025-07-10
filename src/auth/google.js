@@ -32,6 +32,6 @@ const genGoogleURL = asyncHandler(async(req,res)=>{
     state: state
   });
   res.redirect(authorizationUrl);
-})
+});
 
 export { genGoogleURL , oauth2Client , scopes };
