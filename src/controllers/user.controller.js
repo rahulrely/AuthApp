@@ -14,20 +14,15 @@ httpOnly: true,
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
 // Function that generate access and refresh token
-const generateAccessAndRefreshTokens = async (userId) => {
+const generateAccessTokens = async (userId) => {
     try {
         const user = await User.findById(userId);
 
         const accessToken = user.generateAccessToken();
-        const refreshToken = user.generateRefreshToken();
-
-        user.refreshToken = refreshToken;
-        await user.save({ validateBeforeSave: false }); // Save the new refresh token
-
-        return { accessToken, refreshToken };
+        return { accessToken };
 
     } catch (error) {
-        throw new APIError(500, "Went Wrong while generating refresh and access token");
+        throw new APIError(500, "Went Wrong while generating access token");
     }
 }
 
@@ -83,20 +78,18 @@ const registerUserGoogle = asyncHandler(async(req,res)=>{
                 profileURL : picture,
                 googleRefreshToken,
             });
-            const {accessToken ,refreshToken} = generateAccessAndRefreshTokens(user._id)
+            const { accessToken } = generateAccessTokens(user._id)
             
-            const createdUser =  await User.findById(user._id).select("-password -refreshToken -googleRefreshToken -githubAccessToken");
+            const createdUser =  await User.findById(user._id).select("-password -googleRefreshToken -githubAccessToken");
 
             console.log(createdUser);
 
             return res
                 .status(200)
                 .cookie("accessToken", accessToken, options)
-                .cookie("refreshToken", refreshToken, options)
                 .json(
                     new APIResponse(
                         200,
-                        createdUser,
                         "User Succesfully Created and Authenticated"
                     )
                 )
@@ -176,9 +169,9 @@ const registerUserGitHub = asyncHandler(async (req, res) => {
     }
 
     // Step 5: Generate tokens
-    const { accessToken, refreshToken } = generateAccessAndRefreshTokens(user._id);
+    const { accessToken } = generateAccessTokens(user._id);
     const userSafe = await User.findById(user._id).select(
-      '-password -refreshToken -googleRefreshToken -githubAccessToken'
+      '-password -googleRefreshToken -githubAccessToken'
     );
 
     return res
@@ -188,7 +181,6 @@ const registerUserGitHub = asyncHandler(async (req, res) => {
       .json(
         new APIResponse(
           200,
-          userSafe,
           'User successfully authenticated via GitHub'
         )
       );
@@ -198,7 +190,53 @@ const registerUserGitHub = asyncHandler(async (req, res) => {
   }
 });
 
+
+/**
+* Fetch User Details for Profile.
+* @param {Object} req - Express request object.
+* @param {Object} res - Express response object.
+*/
+const userDetails = asyncHandler (async(req,res)=>{
+    let user = req.user; // user details from auth middleware without password google-github-tokens
+
+    if(!user){
+      throw new APIError(404,"User Not Found")
+    }
+
+    const userdetail = {
+      name : user.name,
+      email : user.email,
+      isVerified : user.isVerified,
+      profileURL : user.profileURL
+    }
+    return res
+    .status(200)
+    .json(
+      new APIResponse(
+        200,
+        userdetail,
+        "User Details Successfully fetched."
+      )
+    )
+});
+
+/**
+* Logout the User
+* @param {Object} req - Express request object.
+* @param {Object} res - Express response object.
+*/
+const logoutUser = asyncHandler(async (req, res) => {
+
+    return res
+      .status(200)
+      .clearCookie("accessToken", options)
+      .json(new APIResponse(200, {}, "User Logged Out"));
+
+});
+
 export {
     registerUserGoogle,
     registerUserGitHub,
+    userDetails,
+    logoutUser
 }
