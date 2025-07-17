@@ -98,9 +98,7 @@ const registerUserGoogle = asyncHandler(async (req, res) => {
 
       const accessToken = await generateAccessTokens(user._id);
 
-      const createdUser = await User.findById(user._id).select(
-        "-password -githubAccessToken"
-      );
+      const createdUser = await User.findById(user._id);
 
       // console.log(createdUser,"ACC: ",accessToken); #DebugOnly
 
