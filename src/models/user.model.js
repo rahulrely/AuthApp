@@ -9,7 +9,6 @@ const userSchema = new mongoose.Schema(
             match:/[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g
         },
         isVerified : { type : Boolean , default : false} ,
-        googleRefreshToken : { type : String , default : null},
         githubAccessToken : { type : String , default : null},
         profileURL : { type : String , default : null},
 

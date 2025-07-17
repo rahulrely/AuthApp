@@ -23,7 +23,7 @@ const genGoogleURL = asyncHandler(async(req,res)=>{
   // Generate a url that asks permissions for the Drive activity and Google Calendar scope
   const authorizationUrl = oauth2Client.generateAuthUrl({
     // 'online' (default) or 'offline' (gets refresh_token)
-    access_type: 'offline',
+    access_type: 'online',
     // prompt: 'consent',
     scope: scopes,
     // Enable incremental authorization. Recommended as a best practice.
