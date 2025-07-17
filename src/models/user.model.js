@@ -8,8 +8,7 @@ const userSchema = new mongoose.Schema(
         email: { type: String, unique: true, required: true, index: true,
             match:/[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/g
         },
-        isVerified : { type : Boolean , default : false} ,
-        githubAccessToken : { type : String , default : null},
+        isVerified : { type : Boolean , default : false},
         profileURL : { type : String , default : null},
 
     },{

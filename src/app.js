@@ -2,7 +2,6 @@ import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import session from 'express-session';
-import MongoStore from 'connect-mongo';
 const app = express();
 
 if (!process.env.SECRET || !process.env.MONGO_URI) {
@@ -10,7 +9,7 @@ if (!process.env.SECRET || !process.env.MONGO_URI) {
 }
 
 app.set('trust proxy', 1);
-const allowedOrigins = [process.env.CORS_ORIGIN,"http://localhost:3000"];
+const allowedOrigins = [process.env.CORS_ORIGIN,"http://localhost:5173"];
 app.use(cors({
     origin: function (origin, callback) {
         // allow requests with no origin (like mobile apps or curl requests)
@@ -44,11 +43,9 @@ app.use(session({
 
 // //routes import
 import userRouter  from "./routes/user.route.js"
-// import dashboardRouter from "./routes/dashboard.route.js
 
 //routes declarations
 app.use("/api/v1/users",userRouter);      // http://localhost:7000/api/v1/users
 // app.use("/api/v1/dashboard",dashboardRouter);
 
 export {app} ;
-

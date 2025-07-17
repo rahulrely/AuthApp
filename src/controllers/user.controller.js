@@ -8,17 +8,16 @@ import axios from "axios";
 
 const options = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "Lax", // Use 'None' if cross-origin and using secure cookies
+  secure: true,
+  sameSite: "None",
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
 };
 // Function that generate access and refresh token
 const generateAccessTokens = async (userId) => {
   try {
     const user = await User.findById(userId);
-
     const accessToken = user.generateAccessToken();
-    return { accessToken };
+    return accessToken;
   } catch (error) {
     throw new APIError(500, "Went Wrong while generating access token");
   }
@@ -32,13 +31,13 @@ const generateAccessTokens = async (userId) => {
 const registerUserGoogle = asyncHandler(async (req, res) => {
   try {
     // Log received session data for debugging
-    console.log("googleLink - req.session.state:", req.session?.state);
-    console.log("googleLink - req.query.state:", req.query?.state);
+    // console.log("googleLink - req.session.state:", req.session?.state); #DebugOnly
+    // console.log("googleLink - req.query.state:", req.query?.state);  #DebugOnly
 
     // Handle the OAuth 2.0 server response
     let q = url.parse(req.url, true).query;
 
-    console.log("url query received:", q);
+    // console.log("url query received:", q);  #DebugOnly
 
     if (q.error) {
       // An error response e.g. error=access_denied
@@ -60,7 +59,7 @@ const registerUserGoogle = asyncHandler(async (req, res) => {
       let { tokens } = await oauth2Client.getToken(q.code);
       oauth2Client.setCredentials(tokens);
 
-      console.log("googleToken received:", tokens);
+      // console.log("googleToken received:", tokens);  #DebugOnly
 
       const googleAccessToken = tokens?.access_token;
 
@@ -72,7 +71,7 @@ const registerUserGoogle = asyncHandler(async (req, res) => {
       });
 
       const userinfo = await oauth2.userinfo.get();
-      console.log(userinfo.data);
+      // console.log(userinfo.data);  #DebugOnly
 
       const { email, name, picture, verified_email } = userinfo.data;
 
@@ -80,12 +79,16 @@ const registerUserGoogle = asyncHandler(async (req, res) => {
         name,
         email,
         isVerified: verified_email,
-        profileURL: picture,
       };
 
       const user = await User.findOneAndUpdate(
         { email: email }, // The condition to find the user
-        { $setOnInsert: userData }, // The data to insert if the user doesn't exist
+        {
+          $set: {
+            profileURL: picture,
+          },
+          $setOnInsert: userData
+        }, // The data to insert if the user doesn't exist
         {
           upsert: true, // This creates the document if it doesn't exist
           new: true, // This returns the new document if created, or the existing one if found
@@ -93,20 +96,17 @@ const registerUserGoogle = asyncHandler(async (req, res) => {
         }
       );
 
-      const { accessToken } = generateAccessTokens(user._id);
+      const accessToken = await generateAccessTokens(user._id);
 
       const createdUser = await User.findById(user._id).select(
         "-password -githubAccessToken"
       );
 
-      console.log(createdUser);
+      // console.log(createdUser,"ACC: ",accessToken); #DebugOnly
 
       return res
         .status(200)
         .cookie("accessToken", accessToken, options)
-        .json(
-          new APIResponse(200, "User Succesfully Created and Authenticated")
-        )
         .redirect(`${process.env.DOMAIN}/profile?linked=true`);
     }
   } catch (error) {
@@ -117,8 +117,10 @@ const registerUserGoogle = asyncHandler(async (req, res) => {
         ? error.message
         : "An unexpected error occurred during Google linking.";
     const statusCode = error instanceof APIError ? error.statusCode : 500;
-    return res.status(statusCode);
-    // .redirect(`${process.env.DOMAIN}?error=${encodeURIComponent(errorMessage)}`);
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .redirect(`${process.env.DOMAIN}/profile?linked=true`);
   }
 });
 
@@ -176,23 +178,19 @@ const registerUserGitHub = asyncHandler(async (req, res) => {
         email,
         isVerified: verified,
         profileURL: avatar_url,
-        githubAccessToken: access_token,
       });
     } else {
-      user.githubAccessToken = access_token;
       if (!user.isVerified) user.isVerified = verified;
       user.profileURL = avatar_url;
       await user.save();
     }
 
     // Step 5: Generate tokens
-    const { accessToken } = generateAccessTokens(user._id);
+    const  accessToken  = await generateAccessTokens(user._id);
 
     return res
       .status(200)
       .cookie("accessToken", accessToken, options)
-      .cookie("refreshToken", refreshToken, options)
-      .json(new APIResponse(200, "User successfully authenticated via GitHub"))
       .redirect(`${process.env.DOMAIN}/profile?linked=true`);
   } catch (err) {
     console.error("GitHub OAuth error:", err.response?.data || err.message);
