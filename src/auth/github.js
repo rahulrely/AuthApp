@@ -1,4 +1,4 @@
-import { asyncHandler } from "../utils/asynchandler.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import crypto from "crypto";
 
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID;

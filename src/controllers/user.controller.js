@@ -1,4 +1,4 @@
-import { asyncHandler } from ".././utils/asyncHandler.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 import { APIError, APIResponse } from ".././utils/apiResponse.js";
 import { google } from "googleapis";
 import { oauth2Client } from "../auth/google.js";
