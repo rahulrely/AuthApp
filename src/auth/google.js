@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 import crypto from 'crypto';
-import { asyncHandler } from "../utils/asynchandler.js";
+import { asyncHandler } from ".././utils/asyncHandler.js";
 
 // Setup OAuth2 client
 const oauth2Client = new google.auth.OAuth2(
