@@ -4,9 +4,9 @@ import {
     userDetails,
     logoutUser,
 } from "../controllers/user.controller.js";
-import { verifyJwt } from "../auth.middleware.js"
-import { genGoogleURL } from "../auth/google.js";
-import { genGitHubURL } from "../auth/github.js";
+import { verifyJwt } from ".././auth.middleware.js"
+import { genGoogleURL } from ".././auth/google.js";
+import { genGitHubURL } from ".././auth/github.js";
 
 import { Router } from "express";
 
